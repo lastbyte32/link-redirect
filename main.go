@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -10,6 +11,28 @@ import (
 )
 
 const defaultPort = ":80"
+
+func getIP(r *http.Request) string {
+	var rIP string
+	switch {
+	case r.Header.Get("CF-Connecting-IP") != "":
+		rIP = r.Header.Get("CF-Connecting-IP")
+	case r.Header.Get("X-Forwarded-For") != "":
+		rIP = r.Header.Get("X-Forwarded-For")
+	case r.Header.Get("X-Real-IP") != "":
+		rIP = r.Header.Get("X-Real-IP")
+	default:
+		rIP = r.RemoteAddr
+		if strings.Contains(rIP, ":") {
+			rIP = string(net.ParseIP(strings.Split(r.RemoteAddr, ":")[0]))
+		} else {
+			rIP = string(net.ParseIP(rIP))
+		}
+
+	}
+
+	return rIP
+}
 
 func redirectHandler(l *slog.Logger) func(http.ResponseWriter, *http.Request) {
 	l.Info("handler created")
@@ -20,7 +43,7 @@ func redirectHandler(l *slog.Logger) func(http.ResponseWriter, *http.Request) {
 			return
 		}
 		logger := l.With(
-			slog.String("ip", r.RemoteAddr),
+			slog.String("ip", getIP(r)),
 			slog.String("user-agent", r.UserAgent()),
 			slog.String("referer", r.Referer()),
 		)
