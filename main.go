@@ -11,20 +11,14 @@ import (
 
 const defaultPort = ":80"
 
-func isValidURL(str string) bool {
-	u, err := url.Parse(str)
-	return err == nil && u.Scheme != "" && u.Host != ""
-}
-
-func healthHandler() func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}
-}
-
 func redirectHandler(l *slog.Logger) func(http.ResponseWriter, *http.Request) {
 	l.Info("handler created")
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("OK"))
+			return
+		}
 		logger := l.With(
 			slog.String("ip", r.RemoteAddr),
 			slog.String("user-agent", r.UserAgent()),
@@ -72,7 +66,6 @@ func main() {
 	logger.Info("starting server", slog.String("port", defaultPort))
 
 	http.HandleFunc("/", redirectHandler(logger))
-	http.HandleFunc("/health", healthHandler())
 	if err := http.ListenAndServe(defaultPort, nil); err != nil {
 		logger.Error("failed to start server", slog.String("error", err.Error()))
 	}
