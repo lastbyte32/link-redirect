@@ -15,7 +15,14 @@ func isValidURL(str string) bool {
 	u, err := url.Parse(str)
 	return err == nil && u.Scheme != "" && u.Host != ""
 }
-func handler(l *slog.Logger) func(http.ResponseWriter, *http.Request) {
+
+func healthHandler() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func redirectHandler(l *slog.Logger) func(http.ResponseWriter, *http.Request) {
 	l.Info("handler created")
 	return func(w http.ResponseWriter, r *http.Request) {
 		logger := l.With(
@@ -64,7 +71,8 @@ func main() {
 
 	logger.Info("starting server", slog.String("port", defaultPort))
 
-	http.HandleFunc("/", handler(logger))
+	http.HandleFunc("/", redirectHandler(logger))
+	http.HandleFunc("/health", healthHandler())
 	if err := http.ListenAndServe(defaultPort, nil); err != nil {
 		logger.Error("failed to start server", slog.String("error", err.Error()))
 	}
