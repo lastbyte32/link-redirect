@@ -1,12 +1,12 @@
 FROM golang:1.22 AS builder
 WORKDIR /app
-#COPY go.mod go.sum ./
-#RUN go mod download
-COPY . .
-RUN go build -o /app/main
+COPY go.mod  ./
+RUN go mod download
+COPY *.go ./
+RUN CGO_ENABLED=0 go build -o server
 
 FROM alpine:latest
-WORKDIR /root/
-COPY --from=builder /app/main .
-CMD ["./main"]
+COPY --from=builder /app/server /app/server
+CMD ["/app/server"]
+
 EXPOSE 80
